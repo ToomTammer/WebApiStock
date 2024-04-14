@@ -29,6 +29,7 @@ namespace webapi.Controllers.Data
             ///StartPoint Many To Many
             ///This code snippet is configuring relationships between entities using Fluent API in Entity Framework Core. 
             builder.Entity<Portfolio>(x => x.HasKey(p => new { p.AppUserId, p.StockId }));
+             ///EndPoint Many To Many
 
             // Configuring the relationship between Portfolio and AppUser entities
             builder.Entity<Portfolio>()
@@ -41,8 +42,13 @@ namespace webapi.Controllers.Data
                 .HasOne(u => u.Stock)              // Portfolio has one Stock
                 .WithMany(u => u.Portfolios)        // Stock can be associated with many Portfolios
                 .HasForeignKey(p => p.StockId);    // Foreign key constraint on StockId
-
-            ///EndPoint Many To Many
+            
+            // builder.Entity<Post>()
+            // .HasOne(p => p.Blog)
+            // .WithMany(b => b.Posts)
+            // .HasForeignKey(p => p.BlogId)
+            // .HasConstraintName("BlogForeignKey");
+           
             
 
             List<IdentityRole> roles = new List<IdentityRole>

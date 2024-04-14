@@ -66,7 +66,7 @@ builder.Services.AddDbContext<ApplicationDBContext>(option =>
     option.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
 
-//det up for identity
+//set up for identity
 builder.Services.AddIdentity<AppUser, IdentityRole>(option =>
 {
     option.Password.RequireDigit = true;
