@@ -3,12 +3,15 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using webapi.Controllers.Data;
 using webapi.Dto;
 using webapi.Dto.Stock;
+using webapi.Helpers;
+using webapi.Interfaces;
 using webapi.Mappers;
 using webapi.Model;
 
@@ -19,25 +22,35 @@ namespace webapi.Controllers
     public class StockControllers: ControllerBase
     {
         private readonly ApplicationDBContext _context;
-        public StockControllers(ApplicationDBContext context)
+        private readonly IStockRepository _stockRepo;
+        public StockControllers(ApplicationDBContext context, IStockRepository stockRepo)
         {
+            _stockRepo = stockRepo;
             _context = context;
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll()
+        [Authorize]
+        public async Task<IActionResult> GetAll([FromQuery] QueryObject query)
         {
-            var stocks = await _context.Stocks.ToListAsync();
+            if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
 
-            var stockDto = stocks.Select(s => s.ToStockDto());
+            var stocks = await _stockRepo.GetAllAsync(query);
 
-            return Ok(stocks);
+            var stockDto = stocks.Select(s => s.ToStockDto()).ToList();
+
+            return Ok(stockDto);
         }
 
-        [HttpGet("{id}")]
+        [HttpGet("{id:int}")]
+        [Authorize]
         public async Task<IActionResult> GetById(int id)
         {
-            var stock = await _context.Stocks.FindAsync(id);
+            if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
+
+            var stock = await _stockRepo.GetByIdAsync(id);
 
             if(stock == null)
             {
@@ -47,49 +60,49 @@ namespace webapi.Controllers
         }
 
         [HttpPost]
+        [Authorize]
         public async Task<IActionResult> Create([FromBody] CreateStockRequestDto stockDto)
         {
+            if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
+
             var stockModel = stockDto.ToStockFromCreateDTO();
-            await _context.Stocks.AddAsync(stockModel);
-            await _context.SaveChangesAsync();
+            await _stockRepo.CreateAsync(stockModel);
             return CreatedAtAction(nameof(GetById), new { id = stockModel.Id }, stockModel.ToStockDto());
         }
 
         [HttpPut]
-        [Route("{id}")]
+        [Route("{id:int}")]
+        [Authorize]
         public async Task<IActionResult> Update([FromRoute] int id, [FromBody] UpdateStockRequestDto updateDto)
         {
-            var stockModel = await _context.Stocks.FirstOrDefaultAsync(x => x.Id == id);
+            if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
+
+            var stockModel = await _stockRepo.UpdateAsync(id, updateDto);
 
             if(stockModel == null)
             {
                 return NotFound();
             }
-
-            stockModel.Symbol = updateDto.Symbol;
-            stockModel.CompanyName = updateDto.CompanyName;
-            stockModel.Purchase = updateDto.Purchase;
-            stockModel.Industry = updateDto.Industry;
-            stockModel.MarketCap = updateDto.MarketCap;
-
-            await _context.SaveChangesAsync();
 
             return Ok(stockModel.ToStockDto());
         }
 
         [HttpDelete]
-        [Route("{id}")]
+        [Route("{id:int}")]
+        [Authorize]
         public async Task<IActionResult> Delete([FromRoute] int id)
         {
-            var stockModel = await _context.Stocks.FirstOrDefaultAsync(x => x.Id == id);
+            if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
+                    
+            var stockModel = await _stockRepo.DeleteAsync(id);
 
             if(stockModel == null)
             {
                 return NotFound();
             }
-
-            _context.Stocks.Remove(stockModel);
-            await _context.SaveChangesAsync();
 
             return NoContent();
         }
